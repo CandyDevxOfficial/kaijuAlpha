@@ -1,0 +1,93 @@
+-- 0. ระบบ Anti-Ban Bypass (ป้องกันการตรวจจับเบื้องต้น)
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+    
+    -- ป้องกันไม่ให้เกมส่งคำสั่ง Kick หรือส่ง Log การโกงกลับไป
+    if tostring(method) == "Kick" or tostring(method) == "reportAbuse" then
+        return nil
+    end
+    return oldNamecall(self, unpack(args))
+end)
+setreadonly(mt, true)
+
+-- ส่วนของ UI และระบบ Force Speed เดิม
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local SpeedInput = Instance.new("TextBox")
+local StartBtn = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+-- 1. ตั้งค่าหน้าจอ
+ScreenGui.Parent = game.CoreGui
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Position = UDim2.new(0.5, -90, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 180, 0, 130)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+-- ชื่อ UI: kaiiu Alpha
+Title.Parent = MainFrame
+Title.Text = "kaiiu Alpha Porsche 1.2.0"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+
+-- 2. ช่องพิมพ์ความเร็ว (ที่ Porsche ต้องการ)
+SpeedInput.Parent = MainFrame
+SpeedInput.PlaceholderText = "ใส่ความเร็วที่ต้องการ..."
+SpeedInput.Size = UDim2.new(0, 160, 0, 30)
+SpeedInput.Position = UDim2.new(0, 10, 0, 40)
+SpeedInput.Text = ""
+
+-- 3. ปุ่มกดเริ่ม (ระบบ Force Speed)
+StartBtn.Parent = MainFrame
+StartBtn.Text = "ยังไม่ได้โดยเริ่ม!"
+StartBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- สีแดงแบบเท่ๆ
+StartBtn.Size = UDim2.new(0, 160, 0, 40)
+StartBtn.Position = UDim2.new(0, 10, 0, 80)
+StartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartBtn.Font = Enum.Font.GothamBold
+
+-- 4. ระบบเบื้องหลัง (Force Velocity)
+local player = game.Players.LocalPlayer
+local currentForce = 0
+local isMoving = false
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    if isMoving then
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        if hrp and hum then
+            -- ถ้ามีการกดเดิน ให้ใส่แรงพุ่งไปทิศนั้น
+            if hum.MoveDirection.Magnitude > 0 then
+                hrp.Velocity = Vector3.new(hum.MoveDirection.X * currentForce, hrp.Velocity.Y, hum.MoveDirection.Z * currentForce)
+            end
+        end
+    end
+end)
+
+-- 5. เมื่อกดปุ่มเริ่ม
+StartBtn.MouseButton1Click:Connect(function()
+    local val = tonumber(SpeedInput.Text)
+    if val then
+        currentForce = val
+        isMoving = true
+        StartBtn.Text = "เริ่มแล้วความเร็วเดิน/วิ่งอยู่ที่: " .. val
+        StartBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0) -- เปลี่ยนเป็นสีเขียวเมื่อทำงาน
+    else
+        StartBtn.Text = "คุณยังไม่ได้ใส่ตัวเลข"
+        wait(1)
+        StartBtn.Text = "เริ่มความเร็วในการเดิน/วิ่ง!"
+    end
+end)
